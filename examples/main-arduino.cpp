@@ -1,32 +1,32 @@
 #include <Arduino.h>
 
-#include "rhio-state-machine.h"
+#define PUF_MAX_EVENTS 10
+#include "rhio-puf.h"
 
-StateMachine states(2);
+Puf puf;
 
-unsigned long time = millis();
+pufcb event1(int param) {
+  Serial.println(F("EV1 - Change led status"));
+  digitalWrite(9, !digitalRead(9));
+  puf.emit(0x02, digitalRead(9));
+  return 0;
+}
 
-void ledOn() {
-  if (millis() - time >= 1000) {
-    time = millis();
-    states.set(0x02);
-    digitalWrite(9, HIGH);
-  }
-};
-
-void ledOff() {
-  if (millis() - time >= 1000) {
-    time = millis();
-    digitalWrite(9, LOW);
-    states.set(0x01);
-  }
-};
+pufcb event2(int ledStatus) {
+  Serial.print(F("EV2 - LED status:"));
+  Serial.println(ledStatus);
+  return 0;
+}
 
 void setup() {
   pinMode(9, OUTPUT);
-  states.add(0x01, ledOn);
-  states.add(0x02, ledOff);
-  states.set(0x01);
+  Serial.begin(9600);
+  Serial.println(F("SETUP"));
+  puf.on(0x01, event1);
+  puf.on(0x02, event2);
 }
 
-void loop() { states.run(); }
+void loop() {
+  puf.emit(0x01, 0);
+  delay(1000);
+}
